@@ -264,9 +264,9 @@
         
         .refer-link-card { background: var(--surface-color); border: 1px solid #232d42; border-radius: 16px; padding: 16px; margin-bottom: 24px; }
         .refer-link-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-        .refer-copy-wrapper { display: flex; gap: 10px; background: #0b0f19; border: 1px solid #232d42; border-radius: 4px 4px 4px 12px; align-items: center; }
-        .refer-input-field { background: transparent; border: none; color: #ffffff; font-size: 13px; width: 100%; outline: none; font-family: monospace, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .refer-copy-btn { background: var(--surface-light); border: 1px solid #334155; color: #ffffff; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+        .refer-copy-wrapper { display: flex; gap: 10px; background: #0b0f19; border: 1px solid #232d42; border-radius: 4px 4px 4px 12px; align-items: center; padding: 5px; width: 100%;}
+        .refer-input-field { background: transparent; border: none; color: #ffffff; font-size: 13px; width: 100%; outline: none; font-family: monospace, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 5px;}
+        .refer-copy-btn { background: var(--surface-light); border: 1px solid #334155; color: #ffffff; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; flex-shrink: 0; }
 
         .milestone-section-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; color: #ffffff; display: flex; align-items: center; gap: 8px; }
         .milestone-section-title i { color: #fbbf24; }
@@ -408,7 +408,7 @@
             <div class="refer-link-card">
                 <div class="refer-link-title"><i class="fas fa-link"></i> Your Invite Link</div>
                 <div class="refer-copy-wrapper">
-                    <input type="text" class="refer-input-field" id="refer-link-input" value="" placeholder="লিংক লোড হচ্ছে..." readonly>
+                    <input type="text" class="refer-input-field" id="refer-link-input" value="লিংক লোড হচ্ছে..." readonly>
                     <button class="refer-copy-btn" onclick="copyReferLink()"><i class="fas fa-copy"></i> Copy</button>
                 </div>
             </div>
@@ -516,7 +516,6 @@
         
         let fileAdCounters = JSON.parse(localStorage.getItem('fileAdCounters')) || {}; 
         
-        // মাইলস্টোন ডেটা এরে (২০ থেকে ৫০০ রেফারেল পর্যন্ত)
         const appMilestoneList = [
             { id: 20, target: 20, reward: 100 },
             { id: 50, target: 50, reward: 300 },
@@ -526,14 +525,12 @@
         ];
 
         function setupTelegramProfileData() {
-            const referInput = document.getElementById('refer-link-input');
-            if (referInput) referInput.value = `https://t.me/Desh_Tube_Bot/app?startapp=${tgUserId}`;
-
             if (window.Telegram && window.Telegram.WebApp) {
                 const webApp = window.Telegram.WebApp;
                 webApp.ready();
-                const user = webApp.initDataUnsafe?.user;
+                webApp.expand(); // টেলিগ্রাম স্ক্রিন বড় করার জন্য
                 
+                const user = webApp.initDataUnsafe?.user;
                 if (user) {
                     tgUserId = user.id ? String(user.id) : "web_test_user";
                     if(user.first_name) {
@@ -543,10 +540,14 @@
                         document.getElementById('global-profile-box').innerHTML = `<img src="${user.photo_url}" alt="Profile">`;
                     }
                 }
-                if (user && user.id && referInput) {
-                    referInput.value = `লিংক লোড হচ্ছে`;
-                }
             }
+
+            // রেফারেল ইনপুট বাগ ফিক্সড (টেক্সট ওভাররাইট সমস্যা সমাধান)
+            const referInput = document.getElementById('refer-link-input');
+            if (referInput) {
+                referInput.value = `https://t.me/Desh_Tube_Bot/app?startapp=${tgUserId}`;
+            }
+
             initUserRealtimeData();
         }
 
@@ -673,7 +674,6 @@
                     const t = doc.data();
                     const taskId = doc.id;
                     
-                    // ২৪ ঘণ্টার কমপ্লিশন চেক লক
                     const lastDone = localStorage.getItem(`task_${tgUserId}_${taskId}`);
                     let isLocked = false;
                     if(lastDone) {
@@ -710,7 +710,13 @@
                     userReferralsCount = parseInt(data.referralsCount) || 0;
                     partnerTasksCompletedCount = parseInt(data.partnerTasksCount) || 0;
                 } else {
-                    // ইউজার ডাটাবেজে না থাকলে টেস্টিং এর জন্য ইনিশিয়াল ডাটা তৈরি করা
+                    // নতুন ইউজার ডাটাবেজে না থাকলে স্বয়ংক্রিয় প্রোফাইল তৈরি (বাগ ফিক্সড)
+                    db.collection("users").doc(tgUserId).set({
+                        balance: 0.00,
+                        referralsCount: 0,
+                        partnerTasksCount: 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                     liveUserBalanceValue = 0.00;
                     userReferralsCount = 0;
                     partnerTasksCompletedCount = 0;
@@ -853,6 +859,15 @@
             if(el) el.style.width = `${Math.min(percentage, 100)}%`;
         }
 
+        // টেলিগ্রাম ওপেনিং মেথড ব্যবহার করে অ্যাড পপআপ বাগ ফিক্স
+        function openSecureLink(url) {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        }
+
         function startThreeStepAd() {
             if(userDailyAdsCount >= earnConfig.dailyLimit) return showCustomToast("আজকের ডেইলি অ্যাড লিমিট শেষ! 🛑");
             
@@ -867,7 +882,8 @@
                 } else { fallbackStepOne(); }
             } else if (currentStep === 2) {
                 showCustomToast("Step 2: Adsterra Ad Opening...");
-                window.open((directAdUrl && directAdUrl.trim() !== "") ? directAdUrl.trim() : 'https://www.google.com', '_blank');
+                let url = (directAdUrl && directAdUrl.trim() !== "") ? directAdUrl.trim() : 'https://www.google.com';
+                openSecureLink(url); // ফিক্সড পপআপ ব্লকার
                 currentStep = 3;
                 updateStepUI(3, "Watch Ad (Step 3/3 - Adsgram)");
             } else if (currentStep === 3) {
@@ -883,7 +899,7 @@
 
         function fallbackStepOne() {
             let activeUrl = (directAdUrl && directAdUrl.trim() !== "") ? directAdUrl.trim() : "https://www.google.com";
-            window.open(activeUrl, '_blank');
+            openSecureLink(activeUrl);
             currentStep = 2;
             updateStepUI(2, "Watch Ad (Step 2/3 - Adsterra)");
         }
@@ -896,13 +912,11 @@
             
             let numReward = parseFloat(earnConfig.threeStepReward.replace(/[^\d.]/g, '')) || 20;
             
-            // রিয়েলটাইম ফায়ারবেস পুশ এবং লোকাল আপডেট সিঙ্ক
             db.collection("users").doc(tgUserId).set({ 
                 balance: firebase.firestore.FieldValue.increment(numReward) 
             }, { merge: true }).then(() => {
                 showCustomToast(`অভিনন্দন! ৩-স্টেপ টাস্ক সফল হয়েছে। +${earnConfig.threeStepReward} 🎉`);
             }).catch(() => {
-                // অফলাইন ব্যাকআপ সেফটি
                 liveUserBalanceValue += numReward;
                 document.getElementById('global-user-balance').textContent = `৳${liveUserBalanceValue.toFixed(2)}`;
                 showCustomToast(`টাস্ক সফল! ব্যালেন্স আপডেট হয়েছে। 🎉`);
@@ -921,12 +935,10 @@
             let targetUrl = (link && link.trim() !== "" && link !== "#") ? link.trim() : directAdUrl;
             if(!targetUrl || targetUrl === "") targetUrl = "https://www.google.com";
             
-            // টাস্ক লিংক নতুন ট্যাবে ওপেন হবে নিশ্চিত
-            window.open(targetUrl, '_blank');
+            openSecureLink(targetUrl); // ফিক্সড পার্টনার টাস্ক লিংক ব্লকিং
             
             let numReward = parseFloat(earnConfig.partnerReward.replace(/[^\d.]/g, '')) || 20;
             
-            // ডাটাবেজ আপডেট
             db.collection("users").doc(tgUserId).set({
                 balance: firebase.firestore.FieldValue.increment(numReward),
                 partnerTasksCount: firebase.firestore.FieldValue.increment(1)
@@ -945,10 +957,18 @@
 
         function copyReferLink() {
             const copyText = document.getElementById("refer-link-input");
-            if(!copyText.value || copyText.value.includes("로드")) return showCustomToast("লিংক তৈরি হওয়া পর্যন্ত অপেক্ষা করুন! ⏳");
-            copyText.select();
-            navigator.clipboard.writeText(copyText.value);
-            showCustomToast("ইনভাইট লিংক কপি হয়েছে! 🔗");
+            if(!copyText.value || copyText.value.includes("লোড")) return showCustomToast("লিংক তৈরি হওয়া পর্যন্ত অপেক্ষা করুন! ⏳");
+            
+            // মোবাইল এবং টেলিগ্রাম ব্রাউজারের জন্য উন্নত কপি সিস্টেম
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(copyText.value).then(() => {
+                    showCustomToast("ইনভাইট লিংক কপি হয়েছে! 🔗");
+                });
+            } else {
+                copyText.select();
+                document.execCommand("copy");
+                showCustomToast("ইনভাইট লিংক কপি হয়েছে! 🔗");
+            }
         }
 
         function unlockFileWithAd(fileId, encodedLink) {
@@ -957,7 +977,7 @@
 
             if (isFileUnlocked(fileId)) {
                 showCustomToast("ফাইল ডাউনলোড হচ্ছে... ✅");
-                window.location.href = atob(encodedLink);
+                openSecureLink(atob(encodedLink));
                 return;
             }
 
@@ -992,7 +1012,7 @@
                 localStorage.setItem(`unlocked_${tgUserId}_${fileId}`, Date.now().toString());
                 updateSpecificButtonUI(fileId, requiredAds);
                 showCustomToast("ফাইল সফলভাবে ১ ঘণ্টার জন্য আনলক হয়েছে! 🔓");
-                window.location.href = atob(encodedLink); 
+                openSecureLink(atob(encodedLink)); 
             } else {
                 updateSpecificButtonUI(fileId, requiredAds);
                 showCustomToast(`পরবর্তী অ্যাডটি দেখুন (${fileAdCounters[fileId]}/${requiredAds}) 🔄`);
@@ -1003,7 +1023,7 @@
             const activeDirectUrl = (directAdUrl && directAdUrl.trim() !== "") ? directAdUrl.trim() : "https://www.google.com";
             const targetButton = document.getElementById(`btn-${fileId}`);
             
-            window.open(activeDirectUrl, '_blank'); 
+            openSecureLink(activeDirectUrl); 
             
             fileAdCounters[fileId]++;
             localStorage.setItem('fileAdCounters', JSON.stringify(fileAdCounters));
@@ -1018,7 +1038,7 @@
                 setTimeout(() => {
                     if (targetButton) targetButton.disabled = false;
                     updateSpecificButtonUI(fileId, requiredAds);
-                    window.location.href = atob(encodedLink); 
+                    openSecureLink(atob(encodedLink)); 
                 }, 1500);
             } else {
                 if (targetButton) targetButton.disabled = false;
