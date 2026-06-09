@@ -528,7 +528,7 @@
             if (window.Telegram && window.Telegram.WebApp) {
                 const webApp = window.Telegram.WebApp;
                 webApp.ready();
-                webApp.expand(); // টেলিগ্রাম স্ক্রিন বড় করার জন্য
+                webApp.expand(); 
                 
                 const user = webApp.initDataUnsafe?.user;
                 if (user) {
@@ -542,10 +542,11 @@
                 }
             }
 
-            // রেফারেল ইনপুট বাগ ফিক্সড (টেক্সট ওভাররাইট সমস্যা সমাধান)
+            // ফিক্সড রেফারেল লিংক ফরম্যাট (যা ক্র্যাশ বা ব্ল্যাঙ্ক হওয়া রোধ করবে)
             const referInput = document.getElementById('refer-link-input');
             if (referInput) {
-                referInput.value = `https://t.me/Desh_Tube_Bot/app?startapp=${tgUserId}`;
+                // অনুগ্রহ করে 'Desh_Tube_Bot' পরিবর্তন করে আপনার বটের আসল ইউজারনেমটি বসিয়ে দিন
+                referInput.value = `https://t.me/@DeshTube_Bot?start=${tgUserId}`;
             }
 
             initUserRealtimeData();
@@ -628,7 +629,7 @@
                             <div class="task-item-bottom-row">
                                 <div class="task-item-info">
                                     <h4>${file.name || 'No Title'}</h4>
-                                    <p>${file.description || 'ফাইলটি আনলক করুন'}</p>
+                                    <p>${file.description || 'فایلটি আনলক করুন'}</p>
                                 </div>
                                 <button class="start-task-btn" id="btn-${fileId}" onclick="unlockFileWithAd('${fileId}', '${btoa(file.link)}')">
                                     ${buttonText}
@@ -710,7 +711,6 @@
                     userReferralsCount = parseInt(data.referralsCount) || 0;
                     partnerTasksCompletedCount = parseInt(data.partnerTasksCount) || 0;
                 } else {
-                    // নতুন ইউজার ডাটাবেজে না থাকলে স্বয়ংক্রিয় প্রোফাইল তৈরি (বাগ ফিক্সড)
                     db.collection("users").doc(tgUserId).set({
                         balance: 0.00,
                         referralsCount: 0,
@@ -859,7 +859,7 @@
             if(el) el.style.width = `${Math.min(percentage, 100)}%`;
         }
 
-        // টেলিগ্রাম ওপেনিং মেথড ব্যবহার করে অ্যাড পপআপ বাগ ফিক্স
+        // ইন-অ্যাপ ব্রাউজার ব্লকিং এড়ানোর জন্য সলিড মেথড
         function openSecureLink(url) {
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
                 window.Telegram.WebApp.openLink(url);
@@ -883,7 +883,7 @@
             } else if (currentStep === 2) {
                 showCustomToast("Step 2: Adsterra Ad Opening...");
                 let url = (directAdUrl && directAdUrl.trim() !== "") ? directAdUrl.trim() : 'https://www.google.com';
-                openSecureLink(url); // ফিক্সড পপআপ ব্লকার
+                openSecureLink(url); 
                 currentStep = 3;
                 updateStepUI(3, "Watch Ad (Step 3/3 - Adsgram)");
             } else if (currentStep === 3) {
@@ -935,7 +935,7 @@
             let targetUrl = (link && link.trim() !== "" && link !== "#") ? link.trim() : directAdUrl;
             if(!targetUrl || targetUrl === "") targetUrl = "https://www.google.com";
             
-            openSecureLink(targetUrl); // ফিক্সড পার্টনার টাস্ক লিংক ব্লকিং
+            openSecureLink(targetUrl); 
             
             let numReward = parseFloat(earnConfig.partnerReward.replace(/[^\d.]/g, '')) || 20;
             
@@ -959,7 +959,6 @@
             const copyText = document.getElementById("refer-link-input");
             if(!copyText.value || copyText.value.includes("লোড")) return showCustomToast("লিংক তৈরি হওয়া পর্যন্ত অপেক্ষা করুন! ⏳");
             
-            // মোবাইল এবং টেলিগ্রাম ব্রাউজারের জন্য উন্নত কপি সিস্টেম
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(copyText.value).then(() => {
                     showCustomToast("ইনভাইট লিংক কপি হয়েছে! 🔗");
